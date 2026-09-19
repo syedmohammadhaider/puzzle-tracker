@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DailyLog, LogStatus } from '../../lib/types';
 import { todayLocalISO } from '../../lib/types';
-import { archivePuzzle, createPuzzle, deletePuzzle, fetchPuzzles, fetchRecentLogs, upsertLog } from './api';
+import { archivePuzzle, createPuzzle, deletePuzzle, fetchArchivedPuzzles, fetchPuzzles, fetchRecentLogs, restorePuzzle, upsertLog } from './api';
 import AddPuzzleForm from './AddPuzzleForm';
 import PuzzleCard from './PuzzleCard';
 
@@ -15,16 +15,20 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const [puzzles, setPuzzles] = useState<Awaited<ReturnType<typeof fetchPuzzles>>>([]);
+  const [archived, setArchived] = useState<Awaited<ReturnType<typeof fetchArchivedPuzzles>>>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [archivedBusy, setArchivedBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const ps = await fetchPuzzles();
+      const [ps, ap] = await Promise.all([fetchPuzzles(), fetchArchivedPuzzles()]);
       setPuzzles(ps);
+      setArchived(ap);
       const ls = await fetchRecentLogs(ps.map((p) => p.id), 90);
       setLogs(ls);
     } catch (e) {
@@ -63,7 +67,38 @@ export default function DashboardPage() {
 
   const handleArchive = async (id: string) => {
     await archivePuzzle(id);
-    setPuzzles((p) => p.filter((x) => x.id !== id));
+    setPuzzles((p) => {
+      const found = p.find((x) => x.id === id);
+      if (found) setArchived((a) => [...a, { ...found, is_archived: true }]);
+      return p.filter((x) => x.id !== id);
+    });
+  };
+
+  const handleRestore = async (id: string) => {
+    setArchivedBusy(id);
+    try {
+      await restorePuzzle(id);
+      setArchived((a) => a.filter((x) => x.id !== id));
+      const ps = await fetchPuzzles();
+      setPuzzles(ps);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to restore');
+    } finally {
+      setArchivedBusy(null);
+    }
+  };
+
+  const handleDeleteArchived = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}" and its history?`)) return;
+    setArchivedBusy(id);
+    try {
+      await deletePuzzle(id);
+      setArchived((a) => a.filter((x) => x.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete');
+    } finally {
+      setArchivedBusy(null);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -120,6 +155,47 @@ export default function DashboardPage() {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {archived.length > 0 && (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className="text-sm text-ink/50 hover:text-ink dark:text-paper/50 dark:hover:text-paper"
+          >
+            {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
+          </button>
+          {showArchived && (
+            <ul className="mt-2 divide-y divide-rule border-y border-rule dark:divide-white/10 dark:border-white/10">
+              {archived.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{p.name}</p>
+                    <p className="truncate text-xs text-ink/50 dark:text-paper/50">
+                      {p.url.replace(/^https?:\/\//, '')}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-sm">
+                    <button
+                      onClick={() => handleRestore(p.id)}
+                      disabled={archivedBusy === p.id}
+                      className="hover:text-ink disabled:opacity-50 dark:hover:text-paper"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => handleDeleteArchived(p.id, p.name)}
+                      disabled={archivedBusy === p.id}
+                      className="hover:text-flame disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

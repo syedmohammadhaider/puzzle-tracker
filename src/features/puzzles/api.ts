@@ -25,8 +25,23 @@ export async function createPuzzle(name: string, url: string): Promise<Puzzle> {
   return data as Puzzle;
 }
 
+export async function fetchArchivedPuzzles(): Promise<Puzzle[]> {
+  const { data, error } = await supabase
+    .from('puzzles')
+    .select('*')
+    .eq('is_archived', true)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as Puzzle[];
+}
+
 export async function archivePuzzle(id: string): Promise<void> {
   const { error } = await supabase.from('puzzles').update({ is_archived: true }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function restorePuzzle(id: string): Promise<void> {
+  const { error } = await supabase.from('puzzles').update({ is_archived: false }).eq('id', id);
   if (error) throw new Error(error.message);
 }
 
