@@ -1,10 +1,24 @@
-import type { DailyLog, LogStatus } from '../../lib/types';
+import type { LogStatus } from '../../lib/types';
 
 const OPTIONS: { value: LogStatus; label: string }[] = [
   { value: 'solved', label: 'Solved' },
-  { value: 'attempted', label: 'Attempted' },
-  { value: 'skipped', label: 'Skipped' },
+  { value: 'attempted', label: 'Tried' },
+  { value: 'skipped', label: 'Skip' },
 ];
+
+/** Fill color per state. Missing days render as a hollow dot (see StreakDots). */
+export function dotClass(status?: LogStatus): string {
+  if (status === 'solved') return 'bg-solved';
+  if (status === 'attempted') return 'bg-tried';
+  if (status === 'skipped') return 'bg-skip';
+  return 'border border-rule dark:border-white/20';
+}
+
+const selectedClass: Record<LogStatus, string> = {
+  solved: 'border-solved bg-solved text-white',
+  attempted: 'border-tried bg-tried text-white',
+  skipped: 'border-skip bg-skip text-white',
+};
 
 export default function CheckinControl({
   todayStatus,
@@ -16,7 +30,7 @@ export default function CheckinControl({
   onCheckin: (s: LogStatus) => void;
 }) {
   return (
-    <div className="flex gap-1.5" role="group" aria-label="Today's status">
+    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Today's status">
       {OPTIONS.map((o) => {
         const active = todayStatus === o.value;
         return (
@@ -24,14 +38,11 @@ export default function CheckinControl({
             key={o.value}
             disabled={busy}
             onClick={() => onCheckin(o.value)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition disabled:opacity-50 ${
+            aria-pressed={active}
+            className={`min-h-11 rounded-lg border px-2 py-2 text-sm font-medium disabled:opacity-50 ${
               active
-                ? o.value === 'solved'
-                  ? 'border-green-600 bg-green-600 text-white'
-                  : o.value === 'attempted'
-                    ? 'border-amber-500 bg-amber-500 text-white'
-                    : 'border-neutral-400 bg-neutral-400 text-white'
-                : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-400'
+                ? selectedClass[o.value]
+                : 'border-rule bg-transparent text-ink hover:border-ink/50 dark:border-white/20 dark:text-paper dark:hover:border-paper/60'
             }`}
           >
             {o.label}
@@ -40,12 +51,4 @@ export default function CheckinControl({
       })}
     </div>
   );
-}
-
-export function statusDot(logsByDate: Map<string, DailyLog>, date: string): string {
-  const s = logsByDate.get(date)?.status;
-  if (!s) return 'bg-neutral-100';
-  if (s === 'solved') return 'bg-green-500';
-  if (s === 'attempted') return 'bg-amber-400';
-  return 'bg-neutral-300';
 }

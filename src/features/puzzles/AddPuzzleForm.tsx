@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 export default function AddPuzzleForm({ onAdd }: { onAdd: (name: string, url: string) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -12,7 +13,7 @@ export default function AddPuzzleForm({ onAdd }: { onAdd: (name: string, url: st
     try {
       new URL(url.trim());
     } catch {
-      setError('Please enter a valid URL (https://…).');
+      setError('That URL looks off — try starting with https://');
       return;
     }
     setBusy(true);
@@ -21,6 +22,7 @@ export default function AddPuzzleForm({ onAdd }: { onAdd: (name: string, url: st
       await onAdd(name, url);
       setName('');
       setUrl('');
+      setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add puzzle');
     } finally {
@@ -28,31 +30,59 @@ export default function AddPuzzleForm({ onAdd }: { onAdd: (name: string, url: st
     }
   };
 
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm sm:flex-row">
-      <input
-        className="flex-1 rounded-lg border px-3 py-2 text-sm"
-        placeholder="Puzzle name (e.g. Wordle)"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        maxLength={120}
-      />
-      <input
-        className="flex-[2] rounded-lg border px-3 py-2 text-sm"
-        placeholder="https://…"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        required
-        inputMode="url"
-      />
+  if (!open) {
+    return (
       <button
-        disabled={busy}
-        className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-lg border border-rule px-3.5 py-2.5 text-left text-sm text-ink/60 hover:border-ink/50 hover:text-ink dark:border-white/20 dark:text-paper/60 dark:hover:border-paper/60 dark:hover:text-paper"
       >
-        {busy ? 'Adding…' : 'Add puzzle'}
+        + Add a puzzle
       </button>
-      {error && <p className="text-sm text-red-600 sm:basis-full">{error}</p>}
+    );
+  }
+
+  const input =
+    'w-full rounded-lg border border-rule bg-transparent px-3 py-2 text-sm outline-none placeholder:text-ink/40 focus:border-ink/60 dark:border-white/20 dark:placeholder:text-paper/40 dark:focus:border-paper/60';
+
+  return (
+    <form onSubmit={submit} className="rounded-lg border border-rule p-3 dark:border-white/20">
+      <div className="grid gap-2">
+        <input
+          className={input}
+          placeholder="Puzzle name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          maxLength={120}
+        />
+        <input
+          className={input}
+          placeholder="https://…"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+          inputMode="url"
+        />
+        <div className="flex gap-2">
+          <button
+            disabled={busy}
+            className="min-h-10 flex-1 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper disabled:opacity-50 dark:bg-paper dark:text-ink"
+          >
+            {busy ? 'Adding…' : 'Add puzzle'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setError(null);
+            }}
+            className="min-h-10 rounded-lg border border-rule px-4 py-2 text-sm dark:border-white/20"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+      {error && <p className="mt-2 text-sm text-flame">{error}</p>}
     </form>
   );
 }

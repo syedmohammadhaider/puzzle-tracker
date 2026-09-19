@@ -3,6 +3,7 @@ import type { DailyLog, LogStatus, Puzzle } from '../../lib/types';
 import { calcBestStreak, calcCurrentStreak } from '../../lib/streak';
 import { todayLocalISO } from '../../lib/types';
 import CheckinControl from '../logs/CheckinControl';
+import StreakDots from '../logs/StreakDots';
 import HistoryHeatmap from '../logs/HistoryHeatmap';
 
 export default function PuzzleCard({
@@ -21,6 +22,7 @@ export default function PuzzleCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [justTapped, setJustTapped] = useState<string | undefined>(undefined);
 
   const today = todayLocalISO();
   const todayStatus = logs.find((l) => l.date === today)?.status;
@@ -39,66 +41,66 @@ export default function PuzzleCard({
     }
   };
 
+  const checkin = (s: LogStatus) =>
+    wrap(async () => {
+      await onCheckin(puzzle.id, s);
+      setJustTapped(today);
+    });
+
   return (
-    <div className="rounded-xl border bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold">{puzzle.name}</h2>
-          <a
-            href={puzzle.url}
-            target="_blank"
-            rel="noreferrer"
-            className="block truncate text-sm text-blue-600 hover:underline"
-          >
-            {puzzle.url}
-          </a>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 text-sm">
-          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium" title="Current streak">
-            🔥 {current}
-          </span>
-          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium" title="Best streak">
-            Best {best}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <CheckinControl todayStatus={todayStatus} busy={busy} onCheckin={(s) => wrap(() => onCheckin(puzzle.id, s))} />
-        <div className="flex gap-2 text-xs">
-          <button onClick={() => setShowHistory((v) => !v)} className="underline text-neutral-500">
-            {showHistory ? 'Hide' : 'Last 30 days'}
-          </button>
-          <button
-            onClick={() => wrap(() => onArchive(puzzle.id))}
-            className="underline text-neutral-500"
-            disabled={busy}
-          >
-            Archive
-          </button>
-          <button
-            onClick={() => {
-              if (confirm(`Delete "${puzzle.name}" and its history?`)) wrap(() => onDelete(puzzle.id));
-            }}
-            className="underline text-red-500"
-            disabled={busy}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-
-      {todayStatus && (
-        <p className="mt-2 text-xs text-neutral-500">
-          Today: <span className="font-medium capitalize">{todayStatus}</span>
+    <section>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="min-w-0 flex-1 truncate font-display text-xl font-semibold">{puzzle.name}</h2>
+        <p className="shrink-0 text-flame" title={`Current streak: ${current} days. Best: ${best}.`}>
+          <span aria-hidden>🔥</span>{' '}
+          <span className="font-display text-2xl font-semibold">{current}</span>
+          {best > current && <span className="ml-1.5 text-xs font-normal text-ink/50 dark:text-paper/50">Best {best}</span>}
         </p>
-      )}
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      </div>
+      <a
+        href={puzzle.url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-0.5 block truncate text-sm text-ink/60 underline decoration-rule underline-offset-2 hover:text-ink dark:text-paper/60 dark:decoration-white/20 dark:hover:text-paper"
+      >
+        {puzzle.url.replace(/^https?:\/\//, '')}
+      </a>
+
+      <div className="mt-2.5">
+        <StreakDots logs={logs} days={10} animateDate={justTapped} />
+      </div>
+
+      <div className="mt-3">
+        <CheckinControl todayStatus={todayStatus} busy={busy} onCheckin={checkin} />
+      </div>
+
+      {error && <p className="mt-2 text-sm text-flame">{error}</p>}
+
       {showHistory && (
-        <div className="mt-3 border-t pt-3">
+        <div className="mt-3 border-t border-rule pt-3 dark:border-white/10">
           <HistoryHeatmap logs={logs} />
         </div>
       )}
-    </div>
+
+      <div className="mt-3 flex items-center gap-2 text-sm text-ink/50 dark:text-paper/50">
+        <button onClick={() => setShowHistory((v) => !v)} className="hover:text-ink dark:hover:text-paper">
+          {showHistory ? 'Hide history' : 'Last 30 days'}
+        </button>
+        <span aria-hidden>·</span>
+        <button onClick={() => wrap(() => onArchive(puzzle.id))} className="hover:text-ink dark:hover:text-paper" disabled={busy}>
+          Archive
+        </button>
+        <span aria-hidden>·</span>
+        <button
+          onClick={() => {
+            if (confirm(`Delete "${puzzle.name}" and its history?`)) wrap(() => onDelete(puzzle.id));
+          }}
+          className="hover:text-flame"
+          disabled={busy}
+        >
+          Delete
+        </button>
+      </div>
+    </section>
   );
 }

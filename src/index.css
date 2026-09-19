@@ -1,7 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
+  @apply bg-paper font-sans text-ink dark:bg-coal dark:text-paper;
+}
+
+/* Faint graph-paper texture. Matte, barely there. */
+.graph-paper {
+  background-image:
+    linear-gradient(to right, rgb(31 29 26 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(31 29 26 / 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.dark .graph-paper {
+  background-image:
+    linear-gradient(to right, rgb(247 245 240 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(247 245 240 / 0.05) 1px, transparent 1px);
+}
+
+::selection {
+  background: rgb(201 122 46 / 0.3);
 }
