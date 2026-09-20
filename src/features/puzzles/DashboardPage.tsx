@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DailyLog, LogStatus } from '../../lib/types';
 import { todayLocalISO } from '../../lib/types';
+import { calcCurrentStreak } from '../../lib/streak';
 import { archivePuzzle, createPuzzle, deletePuzzle, fetchArchivedPuzzles, fetchPuzzles, fetchRecentLogs, restorePuzzle, upsertLog } from './api';
 import AddPuzzleForm from './AddPuzzleForm';
 import PuzzleCard from './PuzzleCard';
+import ShareButton from '../share/ShareButton';
+import type { ShareEntry } from '../share/buildShareText';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -51,6 +54,18 @@ export default function DashboardPage() {
     }
     return m;
   }, [logs]);
+
+  // Today's entries in puzzle order, with streaks — client local date, matching the dashboard.
+  const todayEntries: ShareEntry[] = useMemo(() => {
+    const today = todayLocalISO();
+    const out: ShareEntry[] = [];
+    for (const p of puzzles) {
+      const pls = logsByPuzzle.get(p.id) ?? [];
+      const t = pls.find((l) => l.date === today);
+      if (t) out.push({ name: p.name, status: t.status, streak: calcCurrentStreak(pls) });
+    }
+    return out;
+  }, [puzzles, logsByPuzzle]);
 
   const handleAdd = async (name: string, url: string) => {
     const created = await createPuzzle(name, url);
@@ -126,10 +141,15 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-semibold">{greeting()}</h1>
-      <p className="mt-1 text-sm text-ink/60 dark:text-paper/60">
-        {dateStr} — {puzzles.length === 0 ? 'no puzzles yet' : `${puzzles.length} ${puzzles.length === 1 ? 'puzzle' : 'puzzles'} today`}
-      </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold">{greeting()}</h1>
+          <p className="mt-1 text-sm text-ink/60 dark:text-paper/60">
+            {dateStr} — {puzzles.length === 0 ? 'no puzzles yet' : `${puzzles.length} ${puzzles.length === 1 ? 'puzzle' : 'puzzles'} today`}
+          </p>
+        </div>
+        {puzzles.length > 0 && <ShareButton entries={todayEntries} />}
+      </div>
 
       <div className="mt-5">
         <AddPuzzleForm onAdd={handleAdd} />
