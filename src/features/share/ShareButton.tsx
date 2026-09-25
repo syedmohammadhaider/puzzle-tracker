@@ -1,21 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { buildShareText, type ShareEntry } from './buildShareText';
-
-async function copyFallback(text: string): Promise<void> {
-  if (navigator.clipboard) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  // Non-secure contexts (plain http) have no Clipboard API.
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand('copy');
-  document.body.removeChild(ta);
-}
+import { shareText } from './shareText';
 
 export default function ShareButton({ entries }: { entries: ShareEntry[] }) {
   const [toast, setToast] = useState<string | null>(null);
@@ -36,21 +21,9 @@ export default function ShareButton({ entries }: { entries: ShareEntry[] }) {
     // Build synchronously, then call the share/clipboard API directly in the
     // same gesture — both APIs reject if not called from user activation.
     const text = buildShareText(entries, new Date(), window.location.host);
-    if (navigator.share) {
-      try {
-        await navigator.share({ text });
-        return;
-      } catch (e) {
-        if (e instanceof Error && e.name === 'AbortError') return; // user dismissed the sheet
-        // Otherwise fall through to clipboard.
-      }
-    }
-    try {
-      await copyFallback(text);
-      showToast('Copied to clipboard!');
-    } catch {
-      showToast('Could not copy — long-press to select the text');
-    }
+    const outcome = await shareText(text);
+    if (outcome === 'copied') showToast('Copied to clipboard!');
+    else if (outcome === 'failed') showToast('Could not copy — long-press to select the text');
   };
 
   return (

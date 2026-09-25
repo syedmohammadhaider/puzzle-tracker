@@ -1,4 +1,5 @@
 import type { LogStatus } from '../../lib/types';
+import { DAILY_SYMBOL } from './shareEmoji';
 
 export interface ShareEntry {
   name: string;
@@ -6,12 +7,6 @@ export interface ShareEntry {
   /** Current streak for this puzzle. Only shown for solved entries with streak > 1. */
   streak: number;
 }
-
-const SYMBOL: Record<LogStatus, string> = {
-  solved: '✅',
-  attempted: '⏳',
-  skipped: '❌',
-};
 
 function formatDay(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -28,7 +23,7 @@ export function buildShareText(
 ): string {
   const lines = entries.map((e) => {
     const streakBit = e.status === 'solved' && e.streak > 1 ? ` (streak: ${e.streak}🔥)` : '';
-    return `${SYMBOL[e.status]} ${e.name}${streakBit}`;
+    return `${DAILY_SYMBOL[e.status]} ${e.name}${streakBit}`;
   });
   return [`🧩 My puzzles — ${formatDay(date)}`, '', ...lines, '', `Track yours → ${appUrl}`].join('\n');
 }
