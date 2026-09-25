@@ -23,9 +23,20 @@ export default {
           '0%': { transform: 'scale(0.3)', opacity: '0.3' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        'status-pop': {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.15)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'status-ripple': {
+          '0%': { transform: 'scale(1)', opacity: '0.55' },
+          '100%': { transform: 'scale(1.3)', opacity: '0' },
+        },
       },
       animation: {
         'dot-fill': 'dot-fill 200ms ease-out',
+        'status-pop': 'status-pop 300ms ease-out',
+        'status-ripple': 'status-ripple 250ms ease-out forwards',
       },
     },
   },
